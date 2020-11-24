@@ -1,0 +1,66 @@
+# Databricks and ML DevOps (MLOps) Deployment Pipeline
+
+trigger:
+  branches:
+    include:
+    - main
+    - releases/*
+  paths:
+    include:
+    - databricks/*
+    - ml/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: BuildMLSourceAssets
+  jobs:
+  - job: BuildDatabricks
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.7'
+          addToPath: true
+          architecture: 'x64'
+      - task: Bash@3
+        displayName: 'Install Testing Requirements'
+        inputs:
+          targetType: 'inline'
+          script: 'pip install databricks-test spark-testing-base'
+      
+      - task: Bash@3
+        displayName: 'Execute Databricks Tests'
+        inputs:
+          script: 'echo "Hello"'
+      
+
+      
+  - job: BuildAzureML
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.7'
+          addToPath: true
+          architecture: 'x64'
+      - script: echo 'TODO'
+
+- stage: DeployToTest
+  jobs:
+  - job: DeployDatabricksNotebooks
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.7'
+          addToPath: true
+          architecture: 'x64'
+      - task: configuredatabricks@0
+        inputs:
+          url: '$(databricksWorkspaceURL)'
+          token: '$(databricksAccessToken)'
+      
+      - script: echo 'B'
+      
+  - job: DeployAzureMLPipeline
+    steps:
+    - script: ls .
