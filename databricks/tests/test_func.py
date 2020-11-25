@@ -1,4 +1,4 @@
-from databricks.functions import *
+from databricks.notebooks.functions import *
 
 from pyspark.sql import Row
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
