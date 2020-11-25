@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Work Order Cost Analysis
+# MAGIC # Home Purchase Price Analysis
 
 # COMMAND ----------
 
@@ -222,9 +222,3 @@ except:
     print("An exception occurred while trying to save the model.")
     print(f"Saving here instead: {exception_path}")
     pipeFitted.save("/modelException/")
-
-
-# COMMAND ----------
-
-# MAGIC %md
-
