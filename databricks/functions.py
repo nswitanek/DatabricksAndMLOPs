@@ -10,8 +10,12 @@ def indexBedrooms(df, categoricals):
         df
         .groupBy(categoricals)
         .agg({'Bedrooms': 'avg'})
-        .withColumnRenamed('avg(Bedrooms', 'annualBedroomAvg')
+        .withColumnRenamed('avg(Bedrooms)', 'annualBedroomAvg')
+    )
+    out_df = (
+        df
+        .join(temp_df, categoricals)
         .withColumn('bedroomIndex', pyf.col('Bedrooms') / pyf.col('annualBedroomAvg'))
     )
-    out_df = df.join(temp_df, categoricals)
+
     return out_df
