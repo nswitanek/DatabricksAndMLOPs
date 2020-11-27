@@ -1,64 +1,90 @@
-# https://aka.ms/MLOps
+# Deploying Azure ML Pipeline Endpoint DevOps Pipeline
+## Expects two variables defined: DBR_WORKSPACE_URL, DBR_ACCESS_TOKEN
 
 variables:
-- group: mlops
+- group: AMLDBRVariables
+- name: 'SERVICE_CONNECTION'
+  value: 'aml-service-connection' # Workspace Service Connection name
+- name: 'PIPELINE_NAME'
+  value: 'homepricespipeline'
+- name: 'DATASTORE_NAME'
+  value: 'datacontainer'
+- name: 'PIPELINE_DESCRIPTION'
+  value: 'Pipeline Endpoint focused on predicting housing price'
+- name: 'EXPERIMENT_NAME'
+  value: 'homeprice_experiment'
 
-  ml-ws-connection: 'azmldemows' # Workspace Service Connection name
-  ml-ws: 'aml-demo' # AML Workspace name
-  ml-rg: 'aml-demo' # AML resource Group name
-  ml-ct: 'cpu-cluster-1' # AML Compute cluster name
-  ml-path: 'models/diabetes' # Model directory path in repo
-  ml-exp: 'exp-test' # Experiment name
-  ml-model-name: 'diabetes-model' # Model name
-  ml-aks-name: 'aks-prod' # AKS cluster name
+  
+  # SERVICE_CONNECTION: 'azmldemows' # Workspace Service Connection name
+  # ml-ws: 'aml-demo' # AML Workspace name
+  # ml-rg: 'aml-demo' # AML resource Group name
+  # ml-ct: 'cpu-cluster-1' # AML Compute cluster name
+  # ml-path: 'models/diabetes' # Model directory path in repo
+  # ml-exp: 'exp-test' # Experiment name
+  # ml-model-name: 'diabetes-model' # Model name
+  # ml-aks-name: 'aks-prod' # AKS cluster name
 
 trigger:
-  branches: master
+  branches:
+    include:
+    - main
+    - releases/*
   paths:
     include: 
-    - '/ml-pipeline'
-    - '/training'
+    - 'ml/pipeline'
+    - 'databricks/notebooks'
+    exclude:
+    - 'ml/config-templates'
 
 pool:
   vmImage: 'Ubuntu-16.04'
 
-steps:
-- task: AzureCLI@2
-  displayName: 'Install AML CLI'
-  inputs:
-    azureSubscription: $(ml-ws-connection)
-    scriptLocation: inlineScript
-    scriptType: 'bash'
-    inlineScript: 'az extension add -n azure-cli-ml'
+stages:
+- stage: DeployAMLPipelineEndpoint
+  jobs:
+  - job: DeployTrainingEndpoint
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.7'
+        addToPath: true
+        architecture: 'x64'
+    - task: Bash@3
+      displayName: 'Install Azure ML SDK'
+      inputs:
+        targetType: 'inline'
+        script: 'pip install azureml-sdk'
+    
+    - task: AzureCLI@2
+      displayName: 'Install AML CLI'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az extension add -n azure-cli-ml'
 
-- task: AzureCLI@2
-  displayName: 'Attach folder to workspace'
-  inputs:
-    azureSubscription: $(ml-ws-connection)
-    workingDirectory: $(ml-path)
-    scriptLocation: inlineScript
-    scriptType: 'bash'
-    inlineScript: 'az ml folder attach -w $(ml-ws) -g $(ml-rg)'
+    - task: AzureCLI@2
+      displayName: 'Attach folder to workspace'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        workingDirectory: $(System.DefaultWorkingDirectory)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP) -e $(EXPERIMENT_NAME)'
 
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '3.6'
-    addToPath: true
-    architecture: 'x64'
+    # Generates the OUTPUT_AML_PIPELINE_ID 
+    - task: PythonScript@0
+      displayName: 'Build Pipeline'
+      inputs:
+        scriptSource: 'filePath'
+        scriptPath: "$(System.DefaultWorkingDirectory)/ml/pipeline/build_pipeline.py"
+        arguments: "--pipeline-name $(PIPELINE_NAME) --datastore-name $(DATASTORE_NAME) --description \"$(PIPELINE_DESCRIPTION)\""
 
-- task: PythonScript@0
-  displayName: 'Build Pipeline'
-  inputs:
-    scriptSource: 'filePath'
-    scriptPath: "$(System.DefaultWorkingDirectory)/ml/pipeline/build_pipeline.py"
-    arguments: ""
-
-- task: AzureCLI@2
-  displayName: 'Train model via Pipeline Endpoint'
-  inputs:
-    azureSubscription: $(ml-ws-connection)
-    workingDirectory: $(ml-path)
-    scriptLocation: inlineScript
-    scriptType: 'bash'
-    inlineScript: 'az ml run submit-pipeline -e $(ml-exp) -i <pipeline id>'
-  
+    - task: AzureCLI@2
+      displayName: 'Train model via Pipeline Endpoint'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        workingDirectory: $(System.DefaultWorkingDirectory)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az ml run submit-pipeline -n $(EXPERIMENT_NAME) -i $(OUTPUT_AML_PIPELINE_ID)'

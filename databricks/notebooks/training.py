@@ -10,8 +10,8 @@ aml_outputs = dbutils.widgets.get("outputs")
 print(aml_inputs)
 print(aml_outputs)
 
-INPUT_PATH = aml_inputs["trainingcsv"]
-OUTPUT_PATH = aml_outputs["output"]
+INPUT_PATH = dbutils.widgets.get("INPUT_PATH")
+OUTPUT_PATH = dbutils.widgets.get("OUTPUT_PATH")
 
 # COMMAND ----------
 import uuid
@@ -38,7 +38,7 @@ schema = StructType([
 
 # COMMAND ----------
 
-df = spark.read.csv(input_path, header=True, schema=schema)
+df = spark.read.csv(INPUT_PATH, header=True, schema=schema)
 
 df = (
     df
@@ -220,7 +220,7 @@ display(df_predicted.orderBy(pyf.abs("residuals")))
 # COMMAND ----------
 
 try:
-    pipeFitted.save(output_path)
+    pipeFitted.save(OUTPUT_PATH)
 except:
     exception_guid = str(uuid.uuid4())
     exception_path = f"/modelException/{exception_guid}/model"
