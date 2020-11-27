@@ -4,13 +4,18 @@
 
 # COMMAND ----------
 
-input_path = dbutils.widgets.get("INPUT_PATH")
-output_path = dbutils.widgets.get("INPUT_PATH")
+aml_inputs = dbutils.widgets.get("inputs")
+aml_outputs = dbutils.widgets.get("outputs")
+
+print(aml_inputs)
+print(aml_outputs)
+
+INPUT_PATH = aml_inputs["trainingcsv"]
+OUTPUT_PATH = aml_outputs["output"]
 
 # COMMAND ----------
 import uuid
 
-import pandas as pd
 from pyspark.sql import functions as pyf
 from pyspark.sql.types import *
 

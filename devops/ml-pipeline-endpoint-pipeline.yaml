@@ -1,0 +1,64 @@
+# https://aka.ms/MLOps
+
+variables:
+- group: mlops
+
+  ml-ws-connection: 'azmldemows' # Workspace Service Connection name
+  ml-ws: 'aml-demo' # AML Workspace name
+  ml-rg: 'aml-demo' # AML resource Group name
+  ml-ct: 'cpu-cluster-1' # AML Compute cluster name
+  ml-path: 'models/diabetes' # Model directory path in repo
+  ml-exp: 'exp-test' # Experiment name
+  ml-model-name: 'diabetes-model' # Model name
+  ml-aks-name: 'aks-prod' # AKS cluster name
+
+trigger:
+  branches: master
+  paths:
+    include: 
+    - '/ml-pipeline'
+    - '/training'
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+steps:
+- task: AzureCLI@2
+  displayName: 'Install AML CLI'
+  inputs:
+    azureSubscription: $(ml-ws-connection)
+    scriptLocation: inlineScript
+    scriptType: 'bash'
+    inlineScript: 'az extension add -n azure-cli-ml'
+
+- task: AzureCLI@2
+  displayName: 'Attach folder to workspace'
+  inputs:
+    azureSubscription: $(ml-ws-connection)
+    workingDirectory: $(ml-path)
+    scriptLocation: inlineScript
+    scriptType: 'bash'
+    inlineScript: 'az ml folder attach -w $(ml-ws) -g $(ml-rg)'
+
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.6'
+    addToPath: true
+    architecture: 'x64'
+
+- task: PythonScript@0
+  displayName: 'Build Pipeline'
+  inputs:
+    scriptSource: 'filePath'
+    scriptPath: "$(System.DefaultWorkingDirectory)/ml/pipeline/build_pipeline.py"
+    arguments: ""
+
+- task: AzureCLI@2
+  displayName: 'Train model via Pipeline Endpoint'
+  inputs:
+    azureSubscription: $(ml-ws-connection)
+    workingDirectory: $(ml-path)
+    scriptLocation: inlineScript
+    scriptType: 'bash'
+    inlineScript: 'az ml run submit-pipeline -e $(ml-exp) -i <pipeline id>'
+  

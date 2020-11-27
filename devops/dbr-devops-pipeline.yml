@@ -10,7 +10,6 @@ trigger:
   paths:
     include:
     - databricks/*
-    - ml/*
 
 pool:
   # This VM Image is recommended for Databricks deployment extension
@@ -55,6 +54,7 @@ stages:
       - task: deploynotebooks@0
         inputs:
           notebooksFolderPath: '$(System.DefaultWorkingDirectory)/databricks/notebooks'
+          # TODO: Make this dynamic
           workspaceFolder: '/Shared/DemoApp'
       
       

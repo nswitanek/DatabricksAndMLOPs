@@ -56,6 +56,9 @@ if __name__ == "__main__":
     
     training_start = 0
     training_end = int(N*0.9)
+
+    if not os.path.exists("./data"):
+        os.mkdir("./data")
     
     with open('./data/training.csv', 'w', newline='') as fp:
         csv_file = csv.writer(fp)

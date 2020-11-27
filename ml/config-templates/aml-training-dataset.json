@@ -1,0 +1,25 @@
+{
+    "datasetType": "Tabular",
+    "parameters": {
+      "header": false,
+      "includePath": false,
+      "inferColumnTypes": false,
+      "path": [
+        {
+          "datastoreName": "datacontainer",
+          "relativePath": "training.csv"
+        }
+      ],
+      "separator": ",",
+      "sourceType": "delimited_files"
+    },
+    "registration": {
+      "createNewVersion": true,
+      "description": "This is a training data set",
+      "name": "demo-training",
+      "tags": {
+        "purpose": "training"
+      }
+    },
+    "schemaVersion": 1
+  }

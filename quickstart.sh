@@ -17,14 +17,13 @@ AML_WORKSPACE_NAME=$(echo $ARM_OUTPUTS | jq '.amlWorkspace.value' | tr -d '\"')
 TRAIN_SAS_TOKEN=$(az storage blob generate-sas -n training.csv --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_KEY --container-name data --permissions arw --expiry $end | tr -d '\"')
 VALIDATE_SAS_TOKEN=$(az storage blob generate-sas -n validation.csv --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_KEY --container-name data --permissions arw --expiry $end | tr -d '\"')
 
-echo "Collect PAT from Databricks: https://docs.microsoft.com/en-us/azure/databricks/dev-tools/api/latest/authentication"
-echo "Configure your CLI: https://docs.microsoft.com/en-us/azure/databricks/dev-tools/cli/"
+echo "ACTION: Collect PAT from Databricks: https://docs.microsoft.com/en-us/azure/databricks/dev-tools/api/latest/authentication"
+echo "ACTION: Configure your CLI: https://docs.microsoft.com/en-us/azure/databricks/dev-tools/cli/"
 read  -n 1 -p "Press Enter when you've completed Databricks CLI configuration..."
 
 # Create a Secret Scope
 echo "Creating a Secret Scope and Secret Value"
 databricks secrets create-scope --scope $SECRET_SCOPE_NAME --initial-manage-principal users
-
 # Set a Secret
 databricks secrets put --scope $SECRET_SCOPE_NAME --key amlstoragekey --string-value $STORAGE_KEY
 
@@ -45,3 +44,8 @@ echo "AZURE ML: Registering the uploaded datasets"
 az ml dataset register -f data/aml-training-dataset.json --workspace-name $AML_WORKSPACE_NAME --resource-group $RG_NAME --skip-validation
 az ml dataset register -f data/aml-validation-dataset.json --workspace-name $AML_WORKSPACE_NAME --resource-group $RG_NAME --skip-validation
 
+echo "ACTION: Manually attach Databricks Compute (named 'adbcompute') with your Personal Access Token to the Azure ML Workspace"
+echo "https://docs.microsoft.com/en-us/azure/machine-learning/how-to-attach-compute-targets#databricks"
+read  -n 1 -p "Press Enter when you've completed attaching Databricks Compute..."
+
+# Create Variable Group on Azure DevOps Project
