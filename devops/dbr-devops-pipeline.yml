@@ -1,5 +1,7 @@
 # Databricks Notebook DevOps Pipeline
-## Expects two variables defined: databricksWorkspaceURL, databricksAccessToken
+## Expects two variables defined: DBR_WORKSPACE_URL, DBR_ACCESS_TOKEN
+variables:
+- group: AMLDBRVariables
 
 # specific path build
 trigger:
@@ -49,12 +51,10 @@ stages:
           architecture: 'x64'
       - task: configuredatabricks@0
         inputs:
-          url: '$(databricksWorkspaceURL)'
-          token: '$(databricksAccessToken)'
+          url: '$(DBR_WORKSPACE_URL)'
+          token: '$(DBR_ACCESS_TOKEN)'
       - task: deploynotebooks@0
         inputs:
           notebooksFolderPath: '$(System.DefaultWorkingDirectory)/databricks/notebooks'
           # TODO: Make this dynamic
           workspaceFolder: '/Shared/DemoApp'
-      
-      
