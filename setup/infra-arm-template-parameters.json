@@ -13,6 +13,12 @@
       },
       "azureMLSKU": {
         "value": "enterprise"
+      },
+      "appInsightsLocation": {
+          "value": "eastus2"
+      },
+      "appName":{
+          "value": "fnappazdomldeployer"
       }
     }
   }
