@@ -15,11 +15,12 @@
     },
     "registration": {
       "createNewVersion": true,
-      "description": "This is a training data set",
-      "name": "demo-training",
+      "description": "This is the training data set",
+      "name": "training",
       "tags": {
         "purpose": "training"
       }
     },
     "schemaVersion": 1
   }
+  

@@ -2,7 +2,7 @@ import argparse
 from datetime import datetime
 import os
 
-from azureml.core import Datastore, RunConfiguration, Workspace
+from azureml.core import Datastore, RunConfiguration, Workspace, Run
 from azureml.core.authentication import ServicePrincipalAuthentication
 from azureml.core.compute import ComputeTarget, DatabricksCompute
 from azureml.core.databricks import PyPiLibrary
@@ -83,48 +83,46 @@ if __name__ == "__main__":
 
     # Get Datastore
     print("Getting the existing Datastore")
-    def_blob_store = Datastore(ws, datastore_name)
+    datastore = Datastore(ws, datastore_name)
     
     # Get Dataset for Training
     print("Creating Training and Validation data references")
-    # TODO: Make this more dynamic
-    training_input_param = PipelineParameter('input_training_data', '/mnt/data/training.csv')
-    validation_input_param = PipelineParameter('input_validation_data', '/mnt/data/validation.csv')
-    model_output_param = PipelineParameter('model_storage_path', '/mnt/data/models/trained')
-    
-    # NOTE: At time of publishing, there seems to be an issue passing blob store references to Databricks
-    # training_input = DataReference(datastore=def_blob_store, path_on_datastore="training",
-    #                                     data_reference_name="trainingcsv")
-    # validation_input = DataReference(datastore=def_blob_store, path_on_datastore="validation",
-    #                                     data_reference_name="validationcsv")
-    # training_model_output = PipelineData("output", datastore=def_blob_store)
+    # TODO: Make this more dynamic    
+    # NOTE: At time of publishing, you can ONLY use a Blob or ADLS data store
+    training_input = DataReference(datastore=datastore, path_on_datastore="training.csv",
+                                        data_reference_name="training")
+    validation_input = DataReference(datastore=datastore, path_on_datastore="validation.csv",
+                                        data_reference_name="validation")
+    training_model_output = PipelineData("model_path", datastore=datastore)
+    model_name_param = PipelineParameter("model_name", "defaultmodel")
     
     print("Creating Pipeline Steps")
     # Create Pipeline Steps
     train = DatabricksStep(
         name = "Train Model on Databricks", 
-        inputs=[], outputs=[], 
+        inputs=[training_input], outputs=[training_model_output],
         spark_version="7.3.x-cpu-ml-scala2.12",
         node_type="Standard_DS3_v2", 
         num_workers=1,
         # TODO: Make this dynamic 
-        notebook_path="/Shared/DemoApp/training", 
-        notebook_params={"INPUT_PATH": training_input_param, "OUTPUT_PATH": model_output_param}, 
-        pypi_libraries=[PyPiLibrary("azureml-databricks")],
+        notebook_path="/Shared/DemoApp/training",
+        pypi_libraries=[PyPiLibrary("azureml-sdk")],
         compute_target=databricks_compute, 
+        allow_reuse=False,
         version="0.01")
 
     register = DatabricksStep(
         name = "Validate Model on Databricks", 
-        inputs=[],
+        inputs=[training_model_output, validation_input],
         spark_version="7.3.x-cpu-ml-scala2.12",
         node_type="Standard_DS3_v2", 
         num_workers=1,
+        notebook_params={"model_name":model_name_param},
         # TODO: Make this dynamic 
-        notebook_path="/Shared/DemoApp/validation", 
-        notebook_params={"TRAINED_MODEL_PATH": model_output_param, "VALIDATION_PATH": validation_input_param}, 
-        pypi_libraries=[PyPiLibrary("azureml-databricks")],
+        notebook_path="/Shared/DemoApp/validate_register", 
+        pypi_libraries=[PyPiLibrary("azureml-sdk")],
         compute_target=databricks_compute, 
+        allow_reuse=False,
         version="0.01")
 
     # Create the pipeline and publish it

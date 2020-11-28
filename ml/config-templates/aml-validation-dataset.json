@@ -15,11 +15,12 @@
     },
     "registration": {
       "createNewVersion": true,
-      "description": "This is a validation data set",
-      "name": "demo-validation",
+      "description": "This is the validation data set",
+      "name": "validation",
       "tags": {
         "purpose": "validation"
       }
     },
     "schemaVersion": 1
   }
+  
