@@ -19,6 +19,15 @@
       },
       "appName":{
           "value": "fnappazdomldeployer"
+      },
+      "azDOReleaseName": {
+          "value": "DeployRegisteredModel"
+      },
+      "azDOOrganization": {
+          "value": "mswillj" 
+      },
+      "azDOProject": {
+          "value": "DatabricksAndMLOPs"
       }
     }
   }

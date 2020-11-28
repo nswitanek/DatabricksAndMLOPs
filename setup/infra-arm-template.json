@@ -9,6 +9,24 @@
                 "description": "The name of the DevOps pipeline release that will be used to deploy a model when registered."
             }
         },
+        "azDOPersonalAccessToken": {
+            "type":"securestring",
+            "metadata": {
+                "description": "The name of your Azure DevOps organization that houses your release pipeliens."
+            }
+        },
+        "azDOProject":{
+            "type":"string",
+            "metadata": {
+                "description": "The name of your Azure DevOps project that houses your release pipeliens."
+            }
+        },
+        "azDOOrganization": {
+            "type":"string",
+            "metadata": {
+                "description": "The name of your Azure DevOps organization that houses your release pipeliens."
+            }
+        },
         "amlWorkspaceName": {
             "type": "string",
             "metadata": {
@@ -288,6 +306,18 @@
                         {
                             "name": "RELEASE_NAME",
                             "value": "[parameters('azDOReleaseName')]"
+                        },
+                        {
+                            "name": "DEVOPS_ORG",
+                            "value": "[parameters('azDOOrganization')]"
+                        },
+                        {
+                            "name": "DEVOPS_PROJECT",
+                            "value": "[parameters('azDOProject')]"
+                        },
+                        {
+                            "name": "DEVOPS_PERSONAL_ACCESS_TOKEN",
+                            "value": "[parameters('azDOPersonalAccessToken')]"
                         }
                     ]
                 }
