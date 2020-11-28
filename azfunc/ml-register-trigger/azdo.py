@@ -2,16 +2,13 @@ import os
 
 import requests
 
-def get_release_id(release_name):
+def get_release_id(release_name, organization, project, personal_access_token):
     release_found = (-1, "Default message") # Default to no available release
 
-    url = "https://vsrm.dev.azure.com/{organization}/{project}/_apis/release/definitions?api-version=5.1".format(
-        organization = os.environ.get("devops_organization"),
-        project = os.environ.get("devops_project")
-    )
+    url = f"https://vsrm.dev.azure.com/{organization}/{project}/_apis/release/definitions?api-version=5.1"
 
-    username = os.environ.get("personal_access_token")
-    password = os.environ.get("personal_access_token")
+    username = personal_access_token
+    password = personal_access_token
 
     results = requests.get(url, auth=(username, password))
 
@@ -40,15 +37,12 @@ def get_release_id(release_name):
     return release_found
     
 
-def execute_release(release_id, azdo_variables=None):
+def execute_release(release_id, organization, project, personal_access_token, azdo_variables=None):
     
-    url = "https://vsrm.dev.azure.com/{organization}/{project}/_apis/release/releases?api-version=5.1".format(
-        organization = os.environ.get("devops_organization"),
-        project = os.environ.get("devops_project")
-    )
+    url = f"https://vsrm.dev.azure.com/{organization}/{project}/_apis/release/releases?api-version=5.1"
 
-    username = os.environ.get("personal_access_token")
-    password = os.environ.get("personal_access_token")
+    username = personal_access_token
+    password = personal_access_token
 
     data = {
         "definitionId": release_id,
