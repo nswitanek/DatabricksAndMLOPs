@@ -2,6 +2,13 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "azDOReleaseName": {
+            "type": "string",
+            "defaultValue": "DeployRegisteredModel",
+            "metadata": {
+                "description": "The name of the DevOps pipeline release that will be used to deploy a model when registered."
+            }
+        },
         "amlWorkspaceName": {
             "type": "string",
             "metadata": {
@@ -126,9 +133,9 @@
         "containerRegistry": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
         "applicationInsights": "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
         "managedResourceGroupName": "[concat('databricks-rg-', parameters('adbWorkspaceName'), '-', uniqueString(parameters('adbWorkspaceName'), resourceGroup().id))]",
-        "functionAppName": "[parameters('appName')]",
         "applicationInsightsName": "[parameters('appName')]",
-        "functionWorkerRuntime": "[parameters('runtime')]"
+        "functionWorkerRuntime": "[parameters('runtime')]",
+        "eventGridSubName": "[concat(parameters('amlWorkspaceName'),parameters('appName'), uniqueString(resourceGroup().id)) ]"
     },
     "resources": [
 
@@ -248,7 +255,7 @@
         {
             "type": "Microsoft.Web/sites",
             "apiVersion": "2020-06-01",
-            "name": "[variables('functionAppName')]",
+            "name": "[parameters('appName')]",
             "location": "[parameters('location')]",
             "kind": "functionapp,linux",
             "dependsOn": [
@@ -277,6 +284,10 @@
                         {
                             "name": "FUNCTIONS_WORKER_RUNTIME",
                             "value": "[variables('functionWorkerRuntime')]"
+                        },
+                        {
+                            "name": "RELEASE_NAME",
+                            "value": "[parameters('azDOReleaseName')]"
                         }
                     ]
                 }
@@ -293,6 +304,35 @@
             "properties": {
                 "ApplicationId": "[variables('applicationInsightsName')]",
                 "Request_Source": "IbizaWebAppExtensionCreate"
+            }
+        },
+        {
+            "name": "[variables('eventGridSubName')]",
+            "type": "Microsoft.EventGrid/eventSubscriptions",
+            "apiVersion": "2020-06-01",
+            "scope": "[concat('Microsoft.MachineLearningServices/workspaces', '/', parameters('amlWorkspaceName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('amlWorkspaceName'))]",
+                "[resourceId('Microsoft.Web/sites', parameters('appName'))]"
+            ],
+            "properties": {
+                "topic": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('amlWorkspaceName'))]",
+                "destination": {
+                    "endpointType": "AzureFunction",
+                    "properties": {
+                        "resourceId": "[concat(resourceId('Microsoft.Web/sites', parameters('appName')), '/functions/ml-register-trigger')]",
+                        "maxEventsPerBatch": 1,
+                        "preferredBatchSizeInKilobytes": 64
+                    }
+                },
+                "filter": {
+                    "includedEventTypes": [
+                        "Microsoft.MachineLearningServices.ModelRegistered"
+                    ],
+                    "advancedFilters": []
+                },
+                "labels": [],
+                "eventDeliverySchema": "EventGridSchema"
             }
         }
     ],
