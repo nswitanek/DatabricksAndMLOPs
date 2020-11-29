@@ -2,12 +2,12 @@ import os
 
 import requests
 
-def get_release_id(release_name, organization, project, personal_access_token):
+def get_pipeline_id(release_name, organization, project, personal_access_token):
     release_found = (-1, "Default message") # Default to no available release
 
-    url = f"https://vsrm.dev.azure.com/{organization}/{project}/_apis/release/definitions?api-version=5.1"
+    url = f"https://dev.azure.com/{organization}/{project}/_apis/pipelines?api-version=6.0-preview.1"
 
-    username = personal_access_token
+    username = "accessToken"
     password = personal_access_token
 
     results = requests.get(url, auth=(username, password))
@@ -37,22 +37,17 @@ def get_release_id(release_name, organization, project, personal_access_token):
     return release_found
     
 
-def execute_release(release_id, organization, project, personal_access_token, azdo_variables=None):
+def execute_pipeline(pipeline_id, organization, project, personal_access_token, azdo_variables=None):
     
-    url = f"https://vsrm.dev.azure.com/{organization}/{project}/_apis/release/releases?api-version=5.1"
+    url = f"https://dev.azure.com/{organization}/{project}/_apis/pipelines/{pipeline_id}/runs?api-version=6.0-preview.1"
 
-    username = personal_access_token
+    username = "accessToken"
     password = personal_access_token
 
-    data = {
-        "definitionId": release_id,
-        "description": "Creating Sample release",
-        "isDraft": False,
-        "reason": "none"
-    }
+    data = {"variables":{}}
     if azdo_variables:
         # Must be in the form
-        # "variables":{"my_variable_name":{"value":"anewvalue"}}
+        # "variables":{"my_variable_name":{"value":"anewvalue", "isSeret":bool}}
         data.update({"variables":azdo_variables})
 
     header = {"Content-Type":"application/json"}
@@ -61,9 +56,10 @@ def execute_release(release_id, organization, project, personal_access_token, az
 
     output = dict()
     if results.status_code == 200:
-        output["new_release_id"] = results.json()["id"]
-        output["new_release_name"] = results.json()["name"]
-        output["new_release_status"] = results.json()["status"]
+        results_json = results.json()
+        output["new_pipeline_id"] = results_json.get("id", "NotAssigned")
+        output["new_pipeline_name"] = results_json.get("name", "NotAssigned")
+        output["new_pipeline_url"] = results_json.get("url", "NotAssigned")
     else:
         output["error"] = results.json()["message"]
     
