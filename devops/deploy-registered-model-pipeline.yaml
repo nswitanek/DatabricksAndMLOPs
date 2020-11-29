@@ -5,9 +5,8 @@ variables:
 - group: AMLDBRVariables
 - name: 'SERVICE_CONNECTION'
   value: 'aml-service-connection' # Workspace Service Connection name
-- name: MODEL_NAME
-  value: 'defaultmodel'
-
+- name: DEPLOY_ENV
+  value: sparkenv
 
 trigger: none
 
@@ -24,6 +23,7 @@ stages:
         script: |
           echo 'Working with...'
           echo $MODEL_NAME
+          echo $MODEL_VERSION
       
     - task: AzureCLI@2
       displayName: 'Install AML CLI'
@@ -49,7 +49,7 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)/_models
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
+        inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP) -e devops'
 
     - task: AzureCLI@2
       displayName: 'Get desired model'
@@ -59,7 +59,7 @@ stages:
         scriptLocation: inlineScript
         scriptType: 'bash'
         inlineScript: 'az ml model list --model-name $(MODEL_NAME) --latest -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
-      # TODO: Get this to push out as a 
+    
     - task: AzureCLI@2
       displayName: 'Download Latest Model Files'
       inputs:
@@ -67,7 +67,7 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)/_models
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'az ml model download --model-id $(MODEL_ID) --target_dir ./artifacts -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
+        inlineScript: 'az ml model download --model-id $(MODEL_NAME):$(MODEL_VERSION) --target-dir $(System.DefaultWorkingDirectory)/_models/artifacts -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
 
     - task: ArchiveFiles@2
       displayName: 'Archive files'
@@ -97,14 +97,4 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'az ml model deploy -n qa-aci-$(MODEL_NAME) -m $(MODEL_ID) --ic ml/config-templates/inference-config.json --dc ml/config-templates/deployment-config-aci.json --overwrite'
-
-
-    # - task: AzureCLI@2
-    #   displayName: 'Deploy model to AKS for Production'
-    #   inputs:
-    #     azureSubscription: $(ml-ws-connection)
-    #     workingDirectory: $(ml-path)
-    #     scriptLocation: inlineScript
-    #     scriptType: 'bash'
-    #     inlineScript: 'az ml model deploy --name my-sklearn-prod-aks --ct $(ml-aks-name) -m $MODEL_ID --ic devops/inference-config.json --dc devops/deployment-config-aks.json  --overwrite'
+        inlineScript: 'python ml/config-templates/deploy-aci.py -e $(DEPLOY_ENV) -i $(MODEL_NAME):$(MODEL_VERSION) -n qa-aci-$(MODEL_NAME)'
