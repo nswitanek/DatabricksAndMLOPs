@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--environment-name")
     parser.add_argument("-i", "--model-id")
     parser.add_argument("-n", "--service-name")
+    parser.add_argument("-s", "--scoring-script")
     args = parser.parse_args()
     
     # Authenticate to AML Workspace
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     env = Environment.get(ws, "AzureML-PySpark-MmlSpark-0.15").clone(args.environment_name)
 
     inference_config = InferenceConfig(
-        entry_script='./ml/score/score.py', 
+        entry_script=args.scoring_script, 
         environment=env
     )
 
