@@ -133,3 +133,4 @@ dmypy.json
 
 # Intermediate Files
 *.csv
+.azureml/

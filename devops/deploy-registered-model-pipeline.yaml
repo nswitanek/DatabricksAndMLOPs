@@ -1,5 +1,5 @@
 # Deploying Azure ML Pipeline Endpoint DevOps Pipeline
-## Expects two variables defined: AML_WORKSPACE_NAME, AML_RESOURCE_GROUP 
+## Expects two variables defined in a group: AML_WORKSPACE_NAME, AML_RESOURCE_GROUP 
 ## MODEL_NAME should be injected / updated at runtime
 variables:
 - group: AMLDBRVariables
@@ -32,18 +32,64 @@ stages:
         scriptLocation: inlineScript
         scriptType: 'bash'
         inlineScript: 'az extension add -n azure-cli-ml'
+    
+    - task: Bash@3
+      displayName: 'Create _models folder'
+      inputs:
+        targetType: 'inline'
+        script: |
+          mkdir _models
+          mkdir _models/artifacts
+          cp ./ml/score/score.py ./_models/score.py
 
     - task: AzureCLI@2
       displayName: 'Attach folder to workspace'
       inputs:
         azureSubscription: $(SERVICE_CONNECTION)
-        workingDirectory: $(System.DefaultWorkingDirectory)
+        workingDirectory: $(System.DefaultWorkingDirectory)/_models
         scriptLocation: inlineScript
         scriptType: 'bash'
         inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
 
-    # Download model files into _model
-    # Copy score.py into _model folder
+    - task: AzureCLI@2
+      displayName: 'Get desired model'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        workingDirectory: $(System.DefaultWorkingDirectory)/_models
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az ml model list --model-name $(MODEL_NAME) --latest -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
+      # TODO: Get this to push out as a 
+    - task: AzureCLI@2
+      displayName: 'Download Latest Model Files'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        workingDirectory: $(System.DefaultWorkingDirectory)/_models
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az ml model download --model-id $(MODEL_ID) --target_dir ./artifacts -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
+
+    - task: ArchiveFiles@2
+      displayName: 'Archive files'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/_models'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        replaceExistingArchive: true
+
+    - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+      artifact: drop
+
+    # - task: AzureCLI@2
+    #   displayName: 'Attach folder to workspace'
+    #   inputs:
+    #     azureSubscription: $(SERVICE_CONNECTION)
+    #     workingDirectory: $(System.DefaultWorkingDirectory)/drop
+    #     scriptLocation: inlineScript
+    #     scriptType: 'bash'
+    #     inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
+
     - task: AzureCLI@2
       displayName: 'Deploy model to ACI for QA'
       inputs:
@@ -51,7 +97,7 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'az ml model deploy -n qa-aci-$(MODEL_NAME) -m $(MODEL_NAME) --ic ml/config-templates/inference-config.json --dc ml/config-templates/deployment-config-aci.json --overwrite'
+        inlineScript: 'az ml model deploy -n qa-aci-$(MODEL_NAME) -m $(MODEL_ID) --ic ml/config-templates/inference-config.json --dc ml/config-templates/deployment-config-aci.json --overwrite'
 
 
     # - task: AzureCLI@2
