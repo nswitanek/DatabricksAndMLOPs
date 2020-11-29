@@ -10,10 +10,10 @@ trigger:
     - releases/*
   paths:
     include: 
-    - 'azfunc/'
+    - azfunc/*
 
 variables:
-  azureSubscription: 'aml-service-connection'
+  azureSubscription: 'rg-arm-service-connection'
   functionAppName: 'fnappazdomldeployer'
   vmImageName: 'ubuntu-latest'
   workingDirectory: '$(System.DefaultWorkingDirectory)/azfunc'
