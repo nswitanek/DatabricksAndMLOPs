@@ -1,14 +1,19 @@
-# Databricks notebook source
-# MAGIC %md
-# MAGIC # Mounting Blob Storage
+dbutils.widgets.text("CONTAINER_NAME", "data")
+dbutils.widgets.text("ACCOUNT_NAME", "")
+dbutils.widgets.text("SECRET_NAME", "")
+dbutils.widgets.text("SCOPE_NAME", "demoscope")
+dbutils.widgets.text("MOUNT_NAME", "data")
 
-# COMMAND ----------
-
-container_name = dbutils.widgets.get("CONTAINER_NAME", "")
-account_name = dbutils.widgets.get("ACCOUNT_NAME", "")
-secret_name = dbutils.widgets.get("SECRET_NAME", "amlstoragekey")
-scope_name = dbutils.widgets.get("SCOPE_NAME", "demoscope")
-mount_name = dbutils.widgets.get("MOUNT_NAME", "data")
+dbutils.widgets.get("CONTAINER_NAME")
+dbutils.widgets.get("ACCOUNT_NAME")
+dbutils.widgets.get("SECRET_NAME")
+dbutils.widgets.get("SCOPE_NAME")
+dbutils.widgets.get("MOUNT_NAME")
+container_name =  getArgument("CONTAINER_NAME")
+account_name =  getArgument("ACCOUNT_NAME") 
+secret_name = getArgument("SECRET_NAME")
+scope_name = getArgument("SCOPE_NAME")
+mount_name = getArgument("MOUNT_NAME")
 
 if mount_name in dbutils.fs.mounts():
     print(f"Mount '{mount_name}' already exists!")
@@ -22,3 +27,4 @@ else:
         mount_point = f"/mnt/{mount_name}",
         extra_configs = {conf_key:secret_value}
     )
+    display(dbutils.fs.mounts())

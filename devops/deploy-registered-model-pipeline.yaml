@@ -1,60 +1,64 @@
-# https://aka.ms/MLOps
-
+# Deploying Azure ML Pipeline Endpoint DevOps Pipeline
+## Expects two variables defined: AML_WORKSPACE_NAME, AML_RESOURCE_GROUP 
+## MODEL_NAME should be injected / updated at runtime
 variables:
-- group: mlops
-- name: ml-ws-connection
-  value: 'azmldemows' # Workspace Service Connection name
+- group: AMLDBRVariables
+- name: 'SERVICE_CONNECTION'
+  value: 'aml-service-connection' # Workspace Service Connection name
+- name: MODEL_NAME
+  value: 'defaultmodel'
 
 
 trigger: none
 
 pool:
   vmImage: 'Ubuntu-16.04'
+stages:
+- stage: QADeployment
+  jobs:
+  - job: QADeploy
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo 'Working with...'
+          echo $MODEL_NAME
+      
+    - task: AzureCLI@2
+      displayName: 'Install AML CLI'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az extension add -n azure-cli-ml'
 
-steps:
-- task: Bash@3
-  inputs:
-    targetType: 'inline'
-    script: |
-      echo 'Working with...'
-      echo $MODEL_ID
-      ls -R
-      echo '==========='
-      echo "ml-path: $ML_PATH"
-      echo '==========='
-      ls -R $ML_PATH
-- task: AzureCLI@2
-  displayName: 'Install AML CLI'
-  inputs:
-    azureSubscription: $(ml-ws-connection)
-    scriptLocation: inlineScript
-    scriptType: 'bash'
-    inlineScript: 'az extension add -n azure-cli-ml'
+    - task: AzureCLI@2
+      displayName: 'Attach folder to workspace'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        workingDirectory: $(System.DefaultWorkingDirectory)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
 
-- task: AzureCLI@2
-  displayName: 'Attach folder to workspace'
-  inputs:
-    azureSubscription: $(ml-ws-connection)
-    workingDirectory: $(ml-path)
-    scriptLocation: inlineScript
-    scriptType: 'bash'
-    inlineScript: 'az ml folder attach -w $(ml-ws) -g $(ml-rg)'
-
-- task: AzureCLI@2
-  displayName: 'Deploy model to ACI for QA'
-  inputs:
-    azureSubscription: $(ml-ws-connection)
-    workingDirectory: $(ml-path)
-    scriptLocation: inlineScript
-    scriptType: 'bash'
-    inlineScript: 'az ml model deploy -n my-sklearn-qa-aci -m $MODEL_ID --ic ml/config-templates/inference-config.json --dc ml/config-templates/deployment-config-aci.json --overwrite'
+    # Download model files into _model
+    # Copy score.py into _model folder
+    - task: AzureCLI@2
+      displayName: 'Deploy model to ACI for QA'
+      inputs:
+        azureSubscription: $(SERVICE_CONNECTION)
+        workingDirectory: $(System.DefaultWorkingDirectory)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: 'az ml model deploy -n qa-aci-$(MODEL_NAME) -m $(MODEL_NAME) --ic ml/config-templates/inference-config.json --dc ml/config-templates/deployment-config-aci.json --overwrite'
 
 
-# - task: AzureCLI@2
-#   displayName: 'Deploy model to AKS for Production'
-#   inputs:
-#     azureSubscription: $(ml-ws-connection)
-#     workingDirectory: $(ml-path)
-#     scriptLocation: inlineScript
-#     scriptType: 'bash'
-#     inlineScript: 'az ml model deploy --name my-sklearn-prod-aks --ct $(ml-aks-name) -m $MODEL_ID --ic devops/inference-config.json --dc devops/deployment-config-aks.json  --overwrite'
+    # - task: AzureCLI@2
+    #   displayName: 'Deploy model to AKS for Production'
+    #   inputs:
+    #     azureSubscription: $(ml-ws-connection)
+    #     workingDirectory: $(ml-path)
+    #     scriptLocation: inlineScript
+    #     scriptType: 'bash'
+    #     inlineScript: 'az ml model deploy --name my-sklearn-prod-aks --ct $(ml-aks-name) -m $MODEL_ID --ic devops/inference-config.json --dc devops/deployment-config-aks.json  --overwrite'

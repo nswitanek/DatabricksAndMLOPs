@@ -1,41 +1,17 @@
 {
-    "entryScript": "./scoring/realtime/score.py",
+    "entryScript": "score.py",
+    "sourceDirectory": "./_model",
     "environment": {
-        "docker": {
-            "arguments": [],
-            "baseDockerfile": null,
-            "baseImage": "mcr.microsoft.com/azureml/base:intelmpi2018.3-ubuntu16.04",
-            "enabled": false,
-            "sharedVolumes": true,
-            "shmSize": null
-        },
+        "name": "basespark",
+        "version": "0.1.0",
         "environmentVariables": {
-            "INTERNAL_TRACKER": "0.01.00"
+            "EXAMPLE_ENV_VAR": "EXAMPLE_VALUE"
         },
-        "name": "deployment-env",
-        "python": {
-            "baseCondaEnvironment": null,
-            "condaDependencies": {
-                "channels": [
-                    "conda-forge"
-                ],
-                "dependencies": [
-                    "python=3.6.2",
-                    {
-                        "pip": [
-                            "azureml-defaults",
-                            "azureml-telemetry",
-                            "scikit-learn==0.22.1",
-                            "inference-schema[numpy-support]"
-                        ]
-                    }
-                ],
-                "name": "project_environment"
-            },
-            "condaDependenciesFile": null,
-            "interpreterPath": "python",
-            "userManagedDependencies": false
+        "spark": {
+            "repositories": [],
+            "packages": ["azureml-sdk"],
+            "precachePackages": true
         },
-        "version": "1"
+        "inferencingStackVersion": null
     }
 }

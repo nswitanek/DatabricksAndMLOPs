@@ -4,16 +4,19 @@
 
 # COMMAND ----------
 
-aml_inputs = dbutils.widgets.get("inputs")
-aml_outputs = dbutils.widgets.get("outputs")
-
-print(aml_inputs)
-print(aml_outputs)
-
-INPUT_PATH = dbutils.widgets.get("INPUT_PATH")
-OUTPUT_PATH = dbutils.widgets.get("OUTPUT_PATH")
+INPUT_PATH = dbutils.widgets.get("training")
+OUTPUT_PATH = dbutils.widgets.get("model_path")
+storage_acct_config = dbutils.widgets.get("training_blob_config")
+secret_name = dbutils.widgets.get("training_blob_secretname")
+storage_secret = dbutils.secrets.get(scope = "amlscope", key = secret_name)
 
 # COMMAND ----------
+
+# Enabling direct WASBS access
+spark.conf.set(storage_acct_config, storage_secret)
+
+# COMMAND ----------
+
 import uuid
 
 from pyspark.sql import functions as pyf
@@ -22,7 +25,7 @@ from pyspark.sql.types import *
 # COMMAND ----------
 
 schema = StructType([
-  StructField('Year Built', StringType(), True),
+  StructField('YearBuilt', StringType(), True),
   StructField('Bedrooms', IntegerType(), True),
   StructField('Bathrooms', DecimalType(), True),
   StructField('Square Footage', IntegerType(), True),
@@ -138,7 +141,7 @@ string_indexers = [
 onehot = OneHotEncoder(
     inputCols=[f'si{x}' for x in categorical_columns], 
     outputCols=onehot_categorical_names,
-    handleInvalid=True,
+    handleInvalid="error",
     dropLast=True, 
 )
 
@@ -160,7 +163,7 @@ pipeFitted = final_ml_pipeline.fit(df)
 df_predicted = (
     pipeFitted
     .transform(df)
-    .withColumn("residuals", pyf.col("prediction") - pyf.col("y_WOTotal"))
+    .withColumn("residuals", pyf.col("prediction") - pyf.col("y"))
 )
 
 # COMMAND ----------

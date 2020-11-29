@@ -65,11 +65,17 @@ Demonstrating Azure ML and Azure Databricks DevOps Patterns
 * Deploy and Serve Model from Azure Databricks onto Azure Machine Learning
   * [Talk](https://databricks.com/session_na20/deploy-and-serve-model-from-azure-databricks-onto-azure-machine-learning)
   * [Slides](https://www.slideshare.net/databricks/deploy-and-serve-model-from-azure-databricks-onto-azure-machine-learning)
+  * [Azure Databricks as Compute Target(Github Tutorial)](https://github.com/Azure/MachineLearningNotebooks/blob/master/how-to-use-azureml/machine-learning-pipelines/intro-to-pipelines/aml-pipelines-use-databricks-as-compute-target.ipynb)
+  * [Inference Config JSON Schema](https://docs.microsoft.com/en-us/azure/machine-learning/reference-azure-machine-learning-cli#inference-configuration-schema)
 * Azure Machine Learning Event Grid Integration
   * [Tutorial](https://docs.microsoft.com/en-us/azure/machine-learning/how-to-use-event-grid)
   * [Schema Docs](https://docs.microsoft.com/en-us/azure/event-grid/event-schema-machine-learning)
   * [Additional Sample on Github](https://github.com/Azure-Samples/MachineLearningSamples-NoCodeDeploymentTriggeredByEventGrid)
 * Azure DevOps
   * [What are Azure Pipelines?](https://docs.microsoft.com/en-us/azure/devops/pipelines/get-started/pipelines-get-started?view=azure-devops)
+  * [Create a Personal Access Token](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate?view=azure-devops&tabs=preview-page)
   * [Pipeline YAML Schema Reference](https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=azure-devops&tabs=schema%2Cparameter-schema)
   * [Create Releases REST API](https://docs.microsoft.com/en-us/rest/api/azure/devops/release/releases/create?view=azure-devops-rest-6.0)
+* Azure Functions
+  * [Developer Reference](https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-python)
+  * [VS Code Extension](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp).
