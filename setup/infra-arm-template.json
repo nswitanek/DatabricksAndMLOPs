@@ -374,6 +374,14 @@
         "amlWorkspace": {
             "type": "string",
             "value": "[parameters('amlWorkspaceName')]"
+        },
+        "storageAccountName":{
+            "type": "string",
+            "value": "[parameters('storageAccountName')]"
+        },
+        "resourceGroupName": {
+            "type":"string",
+            "value": "[resourceGroup().name]"
         }
     }
 }

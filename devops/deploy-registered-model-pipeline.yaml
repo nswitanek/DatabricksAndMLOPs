@@ -1,6 +1,6 @@
 # Deploying Azure ML Pipeline Endpoint DevOps Pipeline
 ## Expects two variables defined in a group: AML_WORKSPACE_NAME, AML_RESOURCE_GROUP 
-## MODEL_NAME should be injected / updated at runtime
+## MODEL_NAME and MODEL_VERSION should be injected / updated at runtime
 variables:
 - group: AMLDBRVariables
 - name: 'SERVICE_CONNECTION'
@@ -81,15 +81,26 @@ stages:
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
 
-    # - task: AzureCLI@2
-    #   displayName: 'Attach folder to workspace'
-    #   inputs:
-    #     azureSubscription: $(SERVICE_CONNECTION)
-    #     workingDirectory: $(System.DefaultWorkingDirectory)/drop
-    #     scriptLocation: inlineScript
-    #     scriptType: 'bash'
-    #     inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
-
+    # TODO: Split this into a separate stage
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.7'
+        addToPath: true
+        architecture: 'x64'
+      
+    - task: Bash@3
+      displayName: 'Install Azure ML SDK'
+      inputs:
+        targetType: 'inline'
+        script: 'pip install azureml-sdk'
+    
+    - task: Bash@3
+      displayName: 'Replace Model Name with SED'
+      inputs:
+        targetType: 'inline'
+        script: 'sed -i "s/{{MODEL_NAME_TO_BE_REPLACED_BY_SED}}/$MODEL_NAME/g" ml/score/score.py'
+    
+    
     - task: AzureCLI@2
       displayName: 'Deploy model to ACI for QA'
       inputs:
@@ -97,4 +108,4 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'python ml/config-templates/deploy-aci.py -e $(DEPLOY_ENV) -i $(MODEL_NAME):$(MODEL_VERSION) -n qa-aci-$(MODEL_NAME)'
+        inlineScript: 'python ml/config-templates/deploy-aci.py -e $(DEPLOY_ENV) -i $(MODEL_NAME):$(MODEL_VERSION) -n qa-aci-$(MODEL_NAME) -s ml/score/score.py'
