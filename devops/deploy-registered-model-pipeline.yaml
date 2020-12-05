@@ -108,4 +108,4 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'python ml/config-templates/deploy-aci.py -e $(DEPLOY_ENV) -i $(MODEL_NAME):$(MODEL_VERSION) -n qa-aci-$(MODEL_NAME) -s ml/score/score.py'
+        inlineScript: 'python ml/config-templates/deploy-aci.py -i $(MODEL_NAME):$(MODEL_VERSION) -n qa-aci-$(MODEL_NAME) -s ml/score/score.py'
