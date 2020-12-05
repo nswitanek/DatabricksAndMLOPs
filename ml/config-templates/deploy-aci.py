@@ -11,7 +11,6 @@ from azureml.core.webservice import AciWebservice, AksWebservice
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--environment-name")
     parser.add_argument("-i", "--model-id")
     parser.add_argument("-n", "--service-name")
     parser.add_argument("-s", "--scoring-script")
