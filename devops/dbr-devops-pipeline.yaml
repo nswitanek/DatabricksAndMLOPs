@@ -1,7 +1,16 @@
 # Databricks Notebook DevOps Pipeline
-## Expects two variables defined: DBR_WORKSPACE_URL, DBR_ACCESS_TOKEN
+## Expects several variables defined in the AMLDBRVariables: 
+### TENANT_ID
+### CLIENT_ID
+### CLIENT_SECRET
+### AML_SUBSCRIPTION_ID
+### AML_RESOURCE_GROUP
+### DBR_WORKSPACE_NAME
+
 variables:
 - group: AMLDBRVariables
+- name: 'RG_SERVICE_CONNECTION'
+  value: 'rg-arm-service-connection' # ARM Resource Group Service Connection
 
 # specific path build
 trigger:
@@ -44,6 +53,47 @@ stages:
   jobs:
   - job: DeployDatabricksNotebooks
     steps:
+      - task: AzureCLI@2
+        displayName: 'Get Databricks Workspace URL (set DBR_WORKSPACE_URL)'
+        inputs:
+          azureSubscription: $(RG_SERVICE_CONNECTION)
+          scriptLocation: inlineScript
+          scriptType: 'bash'
+          inlineScript: |
+            # Get the Management Access Token
+            MGMTAT=$(curl -X GET -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=client_credentials&client_id=$CLIENT_ID&resource=https://management.core.windows.net/&client_secret=$CLIENT_SECRET" https://login.microsoftonline.com/$TENANT_ID/oauth2/token | jq '.access_token' | tr -d '"')
+            
+            DBRURL=$(curl -X GET -H "Authorization: Bearer $MGMTAT" "https://management.azure.com/subscriptions/$AML_SUBSCRIPTION_ID/resourcegroups/$AML_RESOURCE_GROUP/providers/Microsoft.Databricks/workspaces/$DBR_WORKSPACE_NAME?api-version=2018-04-01" | jq '.properties.workspaceUrl' | tr -d '"' )
+            echo "##vso[task.setvariable variable=DBR_WORKSPACE_URL]https://$DBRURL"
+            echo "Databricks URL: https://$DBRURL"
+
+      - task: AzureCLI@2
+        displayName: 'Get Databricks Access Token From Service Principal (set DBR_ACCESS_TOKEN)'
+        inputs:
+          azureSubscription: $(RG_SERVICE_CONNECTION)
+          scriptLocation: inlineScript
+          scriptType: 'bash'
+          inlineScript: |
+            # Get a Databricks Resource Token
+            DBRAT=$(curl -X GET -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=client_credentials&client_id=$CLIENT_ID&resource=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d&client_secret=$CLIENT_SECRET" https://login.microsoftonline.com/$TENANT_ID/oauth2/token | jq '.access_token' | tr -d '"')
+            
+            echo "DBR AT: $(echo $DBRAT | cut -c -5)"
+
+            # Get the Management Access Token
+            MGMTAT=$(curl -X GET -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=client_credentials&client_id=$CLIENT_ID&resource=https://management.core.windows.net/&client_secret=$CLIENT_SECRET" https://login.microsoftonline.com/$TENANT_ID/oauth2/token | jq '.access_token' | tr -d '"')
+            
+            echo "MGMT AT: $(echo $MGMTAT | cut -c -5)"
+
+            # Create Databricks Access Token with Service Principal that is Contributor
+            DBRTOKEN=$(curl -X POST -H "Authorization: Bearer $DBRAT" -H "X-Databricks-Azure-SP-Management-Token: $MGMTAT" -H "X-Databricks-Azure-Workspace-Resource-Id: /subscriptions/$AML_SUBSCRIPTION_ID/resourceGroups/$AML_RESOURCE_GROUP/providers/Microsoft.Databricks/workspaces/$DBR_WORKSPACE_NAME" --data '{"lifetime_seconds":600}' $DBR_WORKSPACE_URL/api/2.0/token/create | jq '.token_value' | tr -d '"')
+            # Output the access token into a variable
+            echo "##vso[task.setvariable variable=DBR_ACCESS_TOKEN]$DBRTOKEN"
+            
+            echo "DBR PAT: $(echo $DBRTOKEN | cut -c -5)"
+
+            # Test that we can actually call the API
+            curl -X GET -H "Authorization: Bearer $DBRTOKEN" $DBR_WORKSPACE_URL/api/2.0/clusters/list
+      
       - task: UsePythonVersion@0
         inputs:
           versionSpec: '3.7'
