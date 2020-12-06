@@ -39,17 +39,6 @@
                 "description": "Specifies the location for all new resources."
             }
         },
-        "azureMLSKU": {
-            "type": "string",
-            "defaultValue": "basic",
-            "allowedValues": [
-                "basic",
-                "enterprise"
-            ],
-            "metadata": {
-                "description": "Specifies the sku, also referred as 'edition' of the Azure Machine Learning workspace."
-            }
-        },
         "storageAccountName": {
             "type": "string",
             "defaultValue": "[concat('sa',uniqueString(resourceGroup().id, parameters('amlWorkspaceName')))]",
@@ -117,7 +106,7 @@
                 "description": "The pricing tier of workspace."
             }
         },
-        "appName": {
+        "functionAppName": {
             "type": "string",
             "defaultValue": "[concat('fnapp', uniqueString(resourceGroup().id))]",
             "metadata": {
@@ -129,19 +118,6 @@
             "metadata": {
                 "description": "Location for Application Insights"
             }
-        },
-        "runtime": {
-            "type": "string",
-            "defaultValue": "python",
-            "allowedValues": [
-                "node",
-                "dotnet",
-                "java",
-                "python"
-            ],
-            "metadata": {
-                "description": "The language worker runtime to load in the function app."
-            }
         }
     },
     "variables": {
@@ -151,9 +127,8 @@
         "containerRegistry": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
         "applicationInsights": "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
         "managedResourceGroupName": "[concat('databricks-rg-', parameters('adbWorkspaceName'), '-', uniqueString(parameters('adbWorkspaceName'), resourceGroup().id))]",
-        "applicationInsightsName": "[parameters('appName')]",
-        "functionWorkerRuntime": "[parameters('runtime')]",
-        "eventGridSubName": "[concat(parameters('amlWorkspaceName'),parameters('appName'), uniqueString(resourceGroup().id)) ]"
+        "applicationInsightsName": "[parameters('functionAppName')]",
+        "eventGridSubName": "[concat(parameters('amlWorkspaceName'),parameters('functionAppName'), uniqueString(resourceGroup().id)) ]"
     },
     "resources": [
 
@@ -248,8 +223,8 @@
             "name": "[parameters('amlWorkspaceName')]",
             "location": "[parameters('location')]",
             "sku": {
-                "tier": "[parameters('azureMLSKU')]",
-                "name": "[parameters('azureMLSKU')]"
+                "tier": "basic",
+                "name": "basic"
             },
             "identity": {
                 "type": "systemAssigned"
@@ -273,7 +248,7 @@
         {
             "type": "Microsoft.Web/sites",
             "apiVersion": "2020-06-01",
-            "name": "[parameters('appName')]",
+            "name": "[parameters('functionAppName')]",
             "location": "[parameters('location')]",
             "kind": "functionapp,linux",
             "dependsOn": [
@@ -301,7 +276,7 @@
                         },
                         {
                             "name": "FUNCTIONS_WORKER_RUNTIME",
-                            "value": "[variables('functionWorkerRuntime')]"
+                            "value": "python"
                         },
                         {
                             "name": "RELEASE_NAME",
@@ -343,14 +318,14 @@
             "scope": "[concat('Microsoft.MachineLearningServices/workspaces', '/', parameters('amlWorkspaceName'))]",
             "dependsOn": [
                 "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('amlWorkspaceName'))]",
-                "[resourceId('Microsoft.Web/sites', parameters('appName'))]"
+                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
             ],
             "properties": {
                 "topic": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('amlWorkspaceName'))]",
                 "destination": {
                     "endpointType": "AzureFunction",
                     "properties": {
-                        "resourceId": "[concat(resourceId('Microsoft.Web/sites', parameters('appName')), '/functions/ml-register-trigger')]",
+                        "resourceId": "[concat(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '/functions/ml-register-trigger')]",
                         "maxEventsPerBatch": 1,
                         "preferredBatchSizeInKilobytes": 64
                     }

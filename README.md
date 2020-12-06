@@ -1,9 +1,55 @@
 # DatabricksAndMLOPs
-Demonstrating Azure ML and Azure Databricks DevOps Patterns
+Demonstrating Azure ML and Azure Databricks DevOps Patterns.
 
-## Setup
+This repository demonstrates the following activities:
 
+* Databricks
+  * Run unit tests
+  * Upload notebooks
+* Azure ML
+  * Create and publish an ml pipeline
+  * Automatically register a model if it beats that latest model's performance.
+  * Pytest functions
+  * Trigger pipeline run (no wait)
+  * On Model Registration, deploy to ACI
+* Azure Function
+  * Azure App Configuration integration (optional)
+  * Waiting for a model registration event
+  * Trigger an Azure DevOps Release pipeline
+
+## Quickstart
+
+* Create an [Azure DevOps project](https://docs.microsoft.com/en-us/azure/devops/organizations/projects/create-project?view=azure-devops&tabs=preview-page).
 * Install the [Azure Databricks Extension in Azure DevOps](https://marketplace.visualstudio.com/items?itemName=riserrad.azdo-databricks).
+* Create two [Azure Service Connections](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/connect-to-azure?view=azure-devops) 
+  * One with subscription level scope named `rg-arm-service-connection`.
+  * One with an Azure Machine Learning Workspace scope named `aml-service-connection`.
+* Create a [Azure AD Service Principal](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal).
+* Create a [Variable Group](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/variable-groups?view=azure-devops&tabs=yaml) named `AMLDBRVariables`.
+  * Populate the variable group with the following variables
+  ```
+  AML_RESOURCE_GROUP mlopsdemo <Your Resource Group Name>
+  LOCATION eastus2 <The Location of your resource group>
+  TENANT_ID <The Azure Active Directory Tenant Id>
+  AML_SUBSCRIPTION_ID <Your Subscription ID>
+  AML_WORKSPACE_NAME <Your Desired Workspace Name (must be unique)>
+  CLIENT_ID <Your service principals Client Id>
+  CLIENT_SECRET <Your service principals Client Secret>
+  DBR_RESOURCE_GROUP mlopsdemo <Resource Group name that hold the Databricks Workspace>
+  DBR_COMPUTE_NAME adbcompute<Your Databricks Compute Name>
+  DBR_WORKSPACE_NAME adbrmlopsdemo <The name of the Databricks Workspace>
+  ```
+* Create the following [Release Pipelines](https://docs.microsoft.com/en-us/azure/devops/pipelines/release/?view=azure-devops) from the existing YAML files.
+  * "SetupInfrastructure" from `devops/setup-devops-pipeline.yaml`.
+    * Update the parameters in `setup/infra-arm-template-parameters.json` .
+    * Make special note of `azDOOrganization` and `azDOProject`.
+    * Execute the pipeline.
+  * "DeployMLOpsFunc" from `devops/func-devops-pipeline.yaml` and execute it.
+  * "DeployNotebooks" from `devops/dbr-devops-pipeline.yaml` and execute it.
+  * "DeployRegisteredModel" from `devops/deploy-registered-model.yaml`. Do not execute it.
+  * "DeployMLPipelineAndTrain" from `devops/ml-pipeline-endpoint-pipeline.yaml`.
+
+## How Do Different Roles Use This Repo?
 
 ### Azure Machine Learning MLOps
 
@@ -16,56 +62,15 @@ Demonstrating Azure ML and Azure Databricks DevOps Patterns
 * Data Scientist or Engineer Wants to Build Unit Tests for their Notebooks
 * Data Scientist or Engineer Wants to Validate Job Scheduling JSON
 
-## DevOps walkthrough
-
-* Setup
-  * Create project
-  * Create variable group
-  * Create Az KV backed secret scope in Databricks (https://docs.microsoft.com/en-us/azure/databricks/security/secrets/secret-scopes#azure-key-vault-backed-scopes)
-  * Create databricks access token
-  * Store databricks access token in variable group
-  * Store storage account secret in key vault
-  * Mount storage account with a spark-submit on azure databricks cli
-  * Azure ML: Create Databricks connection
-  * Azure ML: Create Azure ML Pipeline and Publish
-  * Azure ML/Databricks: Validation of model 
-  
-
-* Databricks
-  * Run unit tests
-  * Get access token (variable group)
-  * Configure Databricks CLI
-  * Upload notebooks
-
-* Azure ML
-  * https://pumpingco.de/blog/run-an-azure-pipelines-job-only-if-source-code-has-changed/
-  * Create and publish pipeline
-  * Pytest functions
-  * Trigger pipeline run (no wait)
-  
-* Azure ML
-  * On Model Registration, deploy to ACI
-
-* Azure Function
-  * Azure App Configuration integration (optional)
-  * Waiting for a model registration event
-  * Kick off specific pipeline
-
-# Quickstart Prerequisites
-
-* Azure CLI: Logged in and Default subscription set.
-* Databricks CLI: Installed and Configured mid-quickstart.
-* AzCopy CLI: `azcopy` installed and `azcopy login` ran.
-* Azure CLI ML Extension: [Docs](https://docs.microsoft.com/en-us/azure/machine-learning/reference-azure-machine-learning-cli)
-
 # References
 
-* Azure ML Pipelines
+* Azure ML and Azure ML Pipelines
   * [What are Azure ML Pipelines?](https://docs.microsoft.com/en-us/azure/machine-learning/concept-ml-pipelines)
 * Deploy and Serve Model from Azure Databricks onto Azure Machine Learning
   * [Talk](https://databricks.com/session_na20/deploy-and-serve-model-from-azure-databricks-onto-azure-machine-learning)
   * [Slides](https://www.slideshare.net/databricks/deploy-and-serve-model-from-azure-databricks-onto-azure-machine-learning)
   * [Azure Databricks as Compute Target(Github Tutorial)](https://github.com/Azure/MachineLearningNotebooks/blob/master/how-to-use-azureml/machine-learning-pipelines/intro-to-pipelines/aml-pipelines-use-databricks-as-compute-target.ipynb)
+  * [Deploy PySpark Model on AML(Github Tutorial)](https://github.com/Azure/MachineLearningNotebooks/blob/master/how-to-use-azureml/deployment/spark/model-register-and-deploy-spark.ipynb)
   * [Inference Config JSON Schema](https://docs.microsoft.com/en-us/azure/machine-learning/reference-azure-machine-learning-cli#inference-configuration-schema)
 * Azure Machine Learning Event Grid Integration
   * [Tutorial](https://docs.microsoft.com/en-us/azure/machine-learning/how-to-use-event-grid)
@@ -79,3 +84,6 @@ Demonstrating Azure ML and Azure Databricks DevOps Patterns
 * Azure Functions
   * [Developer Reference](https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-python)
   * [VS Code Extension](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp).
+* Azure Databricks Authentication
+  * [Using AAD to reach Databricks REST Endpoints](https://docs.microsoft.com/en-us/azure/databricks/dev-tools/api/latest/aad/service-prin-aad-token).
+  * [The Tokens API](https://docs.microsoft.com/en-us/azure/databricks/dev-tools/api/latest/tokens).

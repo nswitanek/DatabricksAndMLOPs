@@ -3,31 +3,31 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "amlWorkspaceName": {
-        "value": "demoamlworkspacewj"
+        "value": "mlopsmlworkspace"
       },
       "adbWorkspaceName": {
-        "value": "demodbrworkspace"
+        "value": "mlopsdbrworkspace"
       },
       "location": {
         "value": "eastus2"
       },
-      "azureMLSKU": {
-        "value": "enterprise"
-      },
       "appInsightsLocation": {
           "value": "eastus2"
       },
-      "appName":{
-          "value": "fnappazdomldeployer"
+      "functionAppName":{
+          "value": "UNIQUE-FUNCTION-NAME"
       },
       "azDOReleaseName": {
           "value": "DeployRegisteredModel"
       },
       "azDOOrganization": {
-          "value": "mswillj" 
+          "value": "YOURORG" 
       },
       "azDOProject": {
           "value": "DatabricksAndMLOPs"
+      },
+      "azDOPersonalAccessToken":{
+          "value": ""
       }
     }
   }
