@@ -17,6 +17,9 @@ if __name__ == "__main__":
     # Square Footage
     # AvgSchoolRanking
     # LastSalePrice
+    
+    # Set the seed for reproducibility
+    random.seed(54671)
     data = []
     for i in range(N):
         year = random.choice(years)

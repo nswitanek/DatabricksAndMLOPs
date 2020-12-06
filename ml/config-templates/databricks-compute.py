@@ -33,14 +33,12 @@ if __name__ == "__main__":
             subscription_id=os.environ.get("AML_SUBSCRIPTION_ID"),
             auth=sp
     )
-    
-    # Get Compute Target
+
     print("Gathering Compute Target")
-    try:
-        databricks_compute = ComputeTarget(
-            workspace=ws, name=databricks_compute_name)
+    
+    if databricks_compute_name in ws.compute_targets:
         print('Compute target already exists')
-    except ComputeTargetException:
+    else:
         print('Compute not found. Attempting to create.')
         print('databricks_compute_name {}'.format(databricks_compute_name))
         print('databricks_workspace_name {}'.format(databricks_workspace_name))

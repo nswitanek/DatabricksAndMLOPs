@@ -127,8 +127,7 @@
         "containerRegistry": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
         "applicationInsights": "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
         "managedResourceGroupName": "[concat('databricks-rg-', parameters('adbWorkspaceName'), '-', uniqueString(parameters('adbWorkspaceName'), resourceGroup().id))]",
-        "applicationInsightsName": "[parameters('functionAppName')]",
-        "eventGridSubName": "[concat(parameters('amlWorkspaceName'),parameters('functionAppName'), uniqueString(resourceGroup().id)) ]"
+        "applicationInsightsName": "[parameters('functionAppName')]"
     },
     "resources": [
 
@@ -309,35 +308,6 @@
             "properties": {
                 "ApplicationId": "[variables('applicationInsightsName')]",
                 "Request_Source": "IbizaWebAppExtensionCreate"
-            }
-        },
-        {
-            "name": "[variables('eventGridSubName')]",
-            "type": "Microsoft.EventGrid/eventSubscriptions",
-            "apiVersion": "2020-06-01",
-            "scope": "[concat('Microsoft.MachineLearningServices/workspaces', '/', parameters('amlWorkspaceName'))]",
-            "dependsOn": [
-                "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('amlWorkspaceName'))]",
-                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
-            ],
-            "properties": {
-                "topic": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('amlWorkspaceName'))]",
-                "destination": {
-                    "endpointType": "AzureFunction",
-                    "properties": {
-                        "resourceId": "[concat(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '/functions/ml-register-trigger')]",
-                        "maxEventsPerBatch": 1,
-                        "preferredBatchSizeInKilobytes": 64
-                    }
-                },
-                "filter": {
-                    "includedEventTypes": [
-                        "Microsoft.MachineLearningServices.ModelRegistered"
-                    ],
-                    "advancedFilters": []
-                },
-                "labels": [],
-                "eventDeliverySchema": "EventGridSchema"
             }
         }
     ],

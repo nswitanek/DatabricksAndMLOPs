@@ -14,9 +14,6 @@
       "appInsightsLocation": {
           "value": "eastus2"
       },
-      "functionAppName":{
-          "value": "UNIQUE-FUNCTION-NAME"
-      },
       "azDOReleaseName": {
           "value": "DeployRegisteredModel"
       },

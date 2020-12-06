@@ -3,6 +3,7 @@
 ### DEVOPS_PAT: Your devops personal access token
 ### AML_WORKSPACE_NAME: Name of the ML workspace, this will overwrite your ARM template
 ### DBR_WORKSPACE_NAME: Name of the Databricks workspace, this will overwrite your ARM template
+### FUNCTION_APP_NAME: Name of the Function App, this will overwrite your ARM template
 
 variables:
 - group: AMLDBRVariables
@@ -25,7 +26,7 @@ pool:
   vmImage: 'Ubuntu-16.04'
 
 stages:
-- stage: 'Set Up Environment'
+- stage: 'Set_Up_Environment'
   jobs:
   - job: Setup
     steps:
@@ -36,13 +37,20 @@ stages:
         scriptLocation: inlineScript
         scriptType: 'bash'
         inlineScript: |
-          az deployment group create -g $(AML_RESOURCE_GROUP) -n initial_deployment -f ./setup/infra-arm-template.json -p @./setup/infra-arm-template-parameters.json --parameters azDOPersonalAccessToken=$(DEVOPS_PAT) adbWorkspaceName=$(DBR_WORKSPACE_NAME)
+          az deployment group create -g $AML_RESOURCE_GROUP -n initial_deployment -f ./setup/infra-arm-template.json -p @./setup/infra-arm-template-parameters.json --parameters azDOPersonalAccessToken=$DEVOPS_PAT adbWorkspaceName=$DBR_WORKSPACE_NAME functionAppName=$FUNCTION_APP_NAME amlWorkspaceName=$AML_WORKSPACE_NAME
+
+    - task: AzureCLI@2
+      displayName: 'Collect Variables'
+      inputs:
+        azureSubscription: $(RG_SERVICE_CONNECTION)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: |
           end=$(date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ')
-          ARM_OUTPUTS=$(az deployment group show --name $DEPLOYMENT_NAME --resource-group $RG_NAME --query properties.outputs)
+          ARM_OUTPUTS=$(az deployment group show --name initial_deployment --resource-group $AML_RESOURCE_GROUP --query properties.outputs)
           STORAGE_KEY=$(echo $ARM_OUTPUTS | jq '.storageAccountKey.value' | tr -d '\"')
           AML_WORKSPACE_NAME=$(echo $ARM_OUTPUTS | jq '.amlWorkspace.value' | tr -d '\"')
           STORAGE_ACCOUNT_NAME=$(echo $ARM_OUTPUTS | jq '.storageAccountName.value' | tr -d '\"')
-          RG_NAME=$(echo $ARM_OUTPUTS | jq '.resourceGroupName.value' | tr -d '\"')
           TRAIN_SAS_TOKEN=$(az storage blob generate-sas -n training.csv --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_KEY --container-name data --permissions arw --expiry $end | tr -d '\"')
           VALIDATE_SAS_TOKEN=$(az storage blob generate-sas -n validation.csv --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_KEY --container-name data --permissions arw --expiry $end | tr -d '\"')
           echo "Setting variables..."
@@ -50,7 +58,6 @@ stages:
           echo "##vso[task.setvariable variable=TRAIN_SAS_TOKEN]$TRAIN_SAS_TOKEN"
           echo "##vso[task.setvariable variable=VALIDATE_SAS_TOKEN]$VALIDATE_SAS_TOKEN"
           echo "##vso[task.setvariable variable=STORAGE_ACCOUNT_NAME]$STORAGE_ACCOUNT_NAME"
-          echo "##vso[task.setvariable variable=RG_NAME]$RG_NAME"
         workingDirectory: $(System.DefaultWorkingDirectory)
 
     - task: AzureCLI@2
@@ -65,6 +72,7 @@ stages:
           
           DBRURL=$(curl -X GET -H "Authorization: Bearer $MGMTAT" "https://management.azure.com/subscriptions/$AML_SUBSCRIPTION_ID/resourcegroups/$AML_RESOURCE_GROUP/providers/Microsoft.Databricks/workspaces/$DBR_WORKSPACE_NAME?api-version=2018-04-01" | jq '.properties.workspaceUrl' | tr -d '"' )
           echo "##vso[task.setvariable variable=DBR_WORKSPACE_URL]https://$DBRURL"
+          echo "Databricks URL: https://$DBRURL"
 
     - task: AzureCLI@2
       displayName: 'Get Databricks Access Token From Service Principal (set DBR_ACCESS_TOKEN)'
@@ -76,19 +84,34 @@ stages:
           # Get a Databricks Resource Token
           DBRAT=$(curl -X GET -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=client_credentials&client_id=$CLIENT_ID&resource=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d&client_secret=$CLIENT_SECRET" https://login.microsoftonline.com/$TENANT_ID/oauth2/token | jq '.access_token' | tr -d '"')
           
+          echo "DBR AT: $(echo $DBRAT | cut -c -5)"
+
           # Get the Management Access Token
           MGMTAT=$(curl -X GET -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=client_credentials&client_id=$CLIENT_ID&resource=https://management.core.windows.net/&client_secret=$CLIENT_SECRET" https://login.microsoftonline.com/$TENANT_ID/oauth2/token | jq '.access_token' | tr -d '"')
           
+          echo "MGMT AT: $(echo $MGMTAT | cut -c -5)"
+
           # Create Databricks Access Token with Service Principal that is Contributor
-          DBRTOKEN=$(curl -X POST -H "Authorization: Bearer $DBRAT" -H "X-Databricks-Azure-SP-Management-Token: $MGMTAT" -H 'X-Databricks-Azure-Workspace-Resource-Id: /subscriptions/$(AML_SUBSCRIPTION_ID)/resourceGroups/demotest01/providers/Microsoft.Databricks/workspaces/$DBR_WORKSPACE_NAME' $DBR_WORKSPACE_URL/api/2.0/token/create | jq '.token_value' | tr -d '"')
+          DBRTOKEN=$(curl -X POST -H "Authorization: Bearer $DBRAT" -H "X-Databricks-Azure-SP-Management-Token: $MGMTAT" -H "X-Databricks-Azure-Workspace-Resource-Id: /subscriptions/$AML_SUBSCRIPTION_ID/resourceGroups/$AML_RESOURCE_GROUP/providers/Microsoft.Databricks/workspaces/$DBR_WORKSPACE_NAME" $DBR_WORKSPACE_URL/api/2.0/token/create | jq '.token_value' | tr -d '"')
           # Output the access token into a variable
           echo "##vso[task.setvariable variable=DBR_ACCESS_TOKEN]$DBRTOKEN"
+          
+          echo "DBR PAT: $(echo $DBRTOKEN | cut -c -5)"
+
+          # Test that we can actually call the API
+          curl -X GET -H "Authorization: Bearer $DBRTOKEN" $DBR_WORKSPACE_URL/api/2.0/clusters/list
           
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.7'
         addToPath: true
         architecture: 'x64'
+    
+    - task: Bash@3
+      displayName: 'Install Azure ML SDK'
+      inputs:
+        targetType: 'inline'
+        script: 'pip install azureml-sdk'
 
     - task: Bash@3
       displayName: 'Register the Databricks Compute if necessary'
@@ -102,13 +125,20 @@ stages:
         targetType: 'inline'
         script: 'python setup/generate_data.py'
 
-    - task: Bash@3
-      displayName: 'Move the data to blob'
+    - task: AzureCLI@2
+      displayName: 'Move Data to Container'
       inputs:
-        targetType: 'inline'
-        script: |
-          azcopy cp ./data/training.csv "https://$(STORAGE_ACCOUNT_NAME).blob.core.windows.net/data/training.csv?$(TRAIN_SAS_TOKEN)"
-          azcopy cp ./data/validation.csv "https://$(STORAGE_ACCOUNT_NAME).blob.core.windows.net/data/validation.csv?$(VALIDATE_SAS_TOKEN)"
+        azureSubscription: $(RG_SERVICE_CONNECTION)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: |
+          # AZCopy is not up-to-date on ubuntu vm but saving for when it is
+          # azcopy copy ./data/training.csv "https://$STORAGE_ACCOUNT_NAME.blob.core.windows.net/data/training.csv?$TRAIN_SAS_TOKEN"
+          # azcopy copy ./data/validation.csv "https://$STORAGE_ACCOUNT_NAME.blob.core.windows.net/data/validation.csv?$VALIDATE_SAS_TOKEN"
+          # Using azcopy 7 instead...
+          azcopy --source ./data/training.csv --destination "https://$STORAGE_ACCOUNT_NAME.blob.core.windows.net/data/training.csv" --dest-key $STORAGE_KEY
+          azcopy --source ./data/validation.csv --destination "https://$STORAGE_ACCOUNT_NAME.blob.core.windows.net/data/validation.csv" --dest-key $STORAGE_KEY
+        workingDirectory: $(System.DefaultWorkingDirectory)
     
     - task: Bash@3
       displayName: 'Install Azure ML SDK'
@@ -131,7 +161,7 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'az ml folder attach -w $(AML_WORKSPACE_NAME) -g $(AML_RESOURCE_GROUP)'
+        inlineScript: 'az ml folder attach -w $AML_WORKSPACE_NAME -g $AML_RESOURCE_GROUP'
 
     - task: AzureCLI@2
       displayName: 'Register a Datastore'
@@ -140,7 +170,7 @@ stages:
         workingDirectory: $(System.DefaultWorkingDirectory)
         scriptLocation: inlineScript
         scriptType: 'bash'
-        inlineScript: 'az ml datastore attach-blob --account-name $(STORAGE_ACCOUNT_NAME) --container-name data --name datacontainer --workspace-name $(AML_WORKSPACE_NAME) --resource-group $(RG_NAME) --account-key $(STORAGE_KEY)'
+        inlineScript: 'az ml datastore attach-blob --account-name $STORAGE_ACCOUNT_NAME --container-name data --name datacontainer --workspace-name $AML_WORKSPACE_NAME --resource-group $AML_RESOURCE_GROUP --account-key $STORAGE_KEY'
 
     - task: AzureCLI@2
       displayName: 'Register Datasets'
@@ -149,6 +179,6 @@ stages:
         scriptLocation: inlineScript
         scriptType: 'bash'
         inlineScript: |
-          az ml dataset register -f ml/config-templates/aml-training-dataset.json --workspace-name $(AML_WORKSPACE_NAME) --resource-group $(RG_NAME) --skip-validation
-          az ml dataset register -f ml/config-templates/aml-validation-dataset.json --workspace-name $(AML_WORKSPACE_NAME) --resource-group $(RG_NAME) --skip-validation
+          az ml dataset register -f ml/config-templates/aml-training-dataset.json --workspace-name $AML_WORKSPACE_NAME --resource-group $AML_RESOURCE_GROUP --skip-validation
+          az ml dataset register -f ml/config-templates/aml-validation-dataset.json --workspace-name $AML_WORKSPACE_NAME --resource-group $AML_RESOURCE_GROUP --skip-validation
         workingDirectory: $(System.DefaultWorkingDirectory)

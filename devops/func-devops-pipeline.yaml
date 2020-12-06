@@ -1,7 +1,5 @@
-# Python Function App to Linux on Azure
-# Build a Python function app and deploy it to Azure as a Linux function app.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+## Expects several variables defined in the AMLDBRVariables: 
+### FUNCTION_APP_NAME: Name of the Function App, this will overwrite your ARM template
 
 trigger:
   branches:
@@ -13,10 +11,13 @@ trigger:
     - azfunc/*
 
 variables:
-  azureSubscription: 'rg-arm-service-connection'
-  functionAppName: 'fnappazdomldeployer'
-  vmImageName: 'ubuntu-latest'
-  workingDirectory: '$(System.DefaultWorkingDirectory)/azfunc'
+- group: AMLDBRVariables
+- name: 'azureSubscription'
+  value: 'rg-arm-service-connection'
+- name: 'vmImageName'
+  value: 'ubuntu-latest'
+- name: 'workingDirectory'
+  value: '$(System.DefaultWorkingDirectory)/azfunc'
 
 stages:
 - stage: Build
@@ -83,5 +84,5 @@ stages:
             inputs:
               azureSubscription: '$(azureSubscription)'
               appType: functionAppLinux
-              appName: $(functionAppName)
+              appName: $(FUNCTION_APP_NAME)
               package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'

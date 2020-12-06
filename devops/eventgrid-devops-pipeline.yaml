@@ -1,0 +1,29 @@
+# Deploying Azure ML Pipeline Endpoint DevOps Pipeline
+## Expects several variables defined in the AMLDBRVariables: 
+### DEVOPS_PAT: Your devops personal access token
+### AML_WORKSPACE_NAME: Name of the ML workspace, this will overwrite your ARM template
+### FUNCTION_APP_NAME: Name of the Function App, this will overwrite your ARM template
+
+variables:
+- group: AMLDBRVariables
+- name: 'RG_SERVICE_CONNECTION'
+  value: 'rg-arm-service-connection' # ARM Resource Group Service Connection
+
+trigger: none
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+stages:
+- stage: 'Set_Up_Environment'
+  jobs:
+  - job: Setup
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Resource Group Deployment'
+      inputs:
+        azureSubscription: $(RG_SERVICE_CONNECTION)
+        scriptLocation: inlineScript
+        scriptType: 'bash'
+        inlineScript: |
+          az deployment group create -g $AML_RESOURCE_GROUP -n eventgrid-deployment -f ./setup/eventgrid-arm-template.json --parameters functionAppName=$FUNCTION_APP_NAME amlWorkspaceName=$AML_WORKSPACE_NAME

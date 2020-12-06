@@ -38,6 +38,7 @@ This repository demonstrates the following activities:
   DBR_RESOURCE_GROUP mlopsdemo <Resource Group name that hold the Databricks Workspace>
   DBR_COMPUTE_NAME adbcompute<Your Databricks Compute Name>
   DBR_WORKSPACE_NAME adbrmlopsdemo <The name of the Databricks Workspace>
+  FUNCTION_APP_NAME <The name of your function app>
   ```
 * Create the following [Release Pipelines](https://docs.microsoft.com/en-us/azure/devops/pipelines/release/?view=azure-devops) from the existing YAML files.
   * "SetupInfrastructure" from `devops/setup-devops-pipeline.yaml`.
@@ -45,6 +46,7 @@ This repository demonstrates the following activities:
     * Make special note of `azDOOrganization` and `azDOProject`.
     * Execute the pipeline.
   * "DeployMLOpsFunc" from `devops/func-devops-pipeline.yaml` and execute it.
+  * "DeployMLOpsEventGrid" from `devops/event-grid-pipeline.yaml` and execute it.
   * "DeployNotebooks" from `devops/dbr-devops-pipeline.yaml` and execute it.
   * "DeployRegisteredModel" from `devops/deploy-registered-model.yaml`. Do not execute it.
   * "DeployMLPipelineAndTrain" from `devops/ml-pipeline-endpoint-pipeline.yaml`.
