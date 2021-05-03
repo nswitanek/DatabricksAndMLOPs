@@ -3,28 +3,28 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "amlWorkspaceName": {
-        "value": "mlopsmlworkspace"
+        "value": "njs-aml-ws"
       },
       "adbWorkspaceName": {
-        "value": "mlopsdbrworkspace"
+        "value": "njs-adb-ws"
       },
       "location": {
-        "value": "eastus2"
+        "value": "eastus"
       },
       "appInsightsLocation": {
-          "value": "eastus2"
+          "value": "eastus"
       },
       "azDOReleaseName": {
           "value": "DeployRegisteredModel"
       },
       "azDOOrganization": {
-          "value": "YOURORG" 
+          "value": "niswitan" 
       },
       "azDOProject": {
-          "value": "DatabricksAndMLOPs"
+          "value": "mlops-aml-adb"
       },
       "azDOPersonalAccessToken":{
-          "value": ""
+          "value": "aqzffwxbdam7vej7bwuyqsfvsarwlfm22vmwdj4ka35piksqlx2q"
       }
     }
   }
